@@ -1,0 +1,66 @@
+import hmac
+import hashlib
+import json
+import requests
+from flask import Flask, request, render_template
+
+app = Flask(__name__)
+
+# ✅ التوكن الأول مباشرة
+TELEGRAM_BOT_TOKEN = "7721018260:AAF3Agdm5HTp7d6ibMTPURniPMdwQi2BBRQ"
+
+# تحقق من تسجيل الدخول
+def check_telegram_auth(data: dict) -> bool:
+    check_hash = data.pop('hash', None)
+    if not check_hash:
+        return False
+    sorted_data = sorted([f"{k}={v}" for k, v in data.items()])
+    data_string = "\n".join(sorted_data).encode('utf-8')
+    secret = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode('utf-8')).digest()
+    hmac_hash = hmac.new(secret, data_string, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(hmac_hash, check_hash)
+
+# إرسال رسالة الحب مع الأزرار
+def send_love_message(user_id: int):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    keyboard = {
+        "inline_keyboard": [
+            [
+                {"text": "✅ موافق", "callback_data": "accept"},
+                {"text": "❌ رفض", "callback_data": "reject"}
+            ]
+        ]
+    }
+    payload = {
+        "chat_id": user_id,
+        "text": "❤️ حرب يحبك ويريد يرتبط بيك ❤️",
+        "reply_markup": json.dumps(keyboard)
+    }
+    resp = requests.post(url, data=payload)
+    return resp.ok, resp.text
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/auth", methods=["GET", "POST"])
+def auth():
+    data = dict(request.args)
+    if not data:
+        return "No data received", 400
+
+    valid = check_telegram_auth(data.copy())
+    if not valid:
+        return "Telegram auth verification failed", 403
+
+    user_id = int(data.get("id"))
+    username = data.get("username", "")
+
+    ok, resp_text = send_love_message(user_id)
+    if ok:
+        return f"✅ تم إرسال الرسالة للمستخدم @{username} ({user_id})"
+    else:
+        return f"❌ فشل إرسال الرسالة: {resp_text}", 500
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
