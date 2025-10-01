@@ -1,51 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Login</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f6f9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background: #fff;
-            padding: 20px 30px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        h1 {
-            color: #333;
-        }
-        p {
-            color: #666;
-        }
-        .btn {
-            display: inline-block;
-            margin-top: 15px;
-            padding: 10px 20px;
-            background: #0088cc;
-            color: white;
-            border-radius: 8px;
-            text-decoration: none;
-        }
-        .btn:hover {
-            background: #0077b5;
-        }
-    </style>
+    <title>تسجيل الدخول عبر تليجرام</title>
 </head>
-<body>
-    <div class="container">
-        <h1>Welcome 🚀</h1>
-        <p>This is your Telegram Login project running on Railway!</p>
-        <a href="#" class="btn">Get Started</a>
-    </div>
+<body style="text-align:center; margin-top:50px;">
+
+    <h2>مرحباً 🚀</h2>
+    <p>سجّل دخولك عبر تليجرام</p>
+
+    <!-- زر تسجيل الدخول -->
+    <script async src="https://telegram.org/js/telegram-widget.js?22"
+            data-telegram-login="D_Xzbot"  <!-- استبدل باسم اليوزرنيم للبوت -->
+            data-size="large"
+            data-auth-url="/auth"
+            data-request-access="write">
+    </script>
+
 </body>
 </html>
