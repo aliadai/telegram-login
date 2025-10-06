@@ -3,7 +3,7 @@ import os
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-TOKEN = os.environ.get("7552260372:AAHUPs-T2AjeS8Jxq7cvuWPO4gixQpAVQ_w")
+TOKEN = os.environ.get("BOT_TOKEN")
 if not TOKEN:
     print("ERROR: BOT_TOKEN not set")
     exit(1)
