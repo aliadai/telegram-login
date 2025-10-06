@@ -1,65 +1,61 @@
-from flask import Flask, request, render_template
-import requests
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import os
 
-app = Flask(__name__)
+# التوكن من متغير البيئة (حتى ما تكتبه علنيًا)
+TOKEN = os.getenv("BOT_TOKEN")
 
-BOT_TOKEN = "7721018260:AAF3Agdm5HTp7d6ibMTPURniPMdwQi2BBRQ"  
-ADMIN_ID = 7182427468      # آيديك إنت
+# حالة تفعيل الزر
+button_enabled = True
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = []
+    if button_enabled:
+        keyboard = [[InlineKeyboardButton("زر شفاف ✨", url="https://t.me/yourusername")]]
+    reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
+    await update.message.reply_text("👋 أهلاً! أرسل أي رسالة وسأضيف لها زر شفاف تلقائيًا.", reply_markup=reply_markup)
 
-@app.route("/auth", methods=["POST"])
-def auth():
-    data = request.form.to_dict()
-    user_id = data.get("id")
-    first_name = data.get("first_name")
+async def auto_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global button_enabled
+    message = update.message
+    if not message:
+        return
 
-    text = f"💌 حرب يريدك بحياته ويرتبط بيك يا {first_name}!\nشنو رأيك؟"
+    keyboard = []
+    if button_enabled:
+        keyboard = [[InlineKeyboardButton("زر شفاف ✨", url="https://t.me/yourusername")]]
+    reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
 
-    keyboard = {
-        "inline_keyboard": [
-            [{"text": "✅ موافق", "callback_data": f"accept_{user_id}"}],
-            [{"text": "❌ رافض", "callback_data": f"reject_{user_id}"}]
-        ]
-    }
+    await message.reply_text(
+        f"📩 {message.text}\n\n✅ تمت إضافة الزر تلقائيًا" if button_enabled else f"📩 {message.text}",
+        reply_markup=reply_markup
+    )
 
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": user_id, "text": text, "reply_markup": str(keyboard)}
-    requests.post(url, data=payload)
+async def toggle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global button_enabled
+    if not context.args:
+        await update.message.reply_text("استخدم: /toggle on أو /toggle off")
+        return
 
-    return "تم الإرسال ✅"
+    arg = context.args[0].lower()
+    if arg == "on":
+        button_enabled = True
+        await update.message.reply_text("✅ تم تفعيل الزر التلقائي.")
+    elif arg == "off":
+        button_enabled = False
+        await update.message.reply_text("❌ تم تعطيل الزر التلقائي.")
+    else:
+        await update.message.reply_text("استخدم: /toggle on أو /toggle off فقط.")
 
+def main():
+    app = Application.builder().token(TOKEN).build()
 
-# Webhook لمعالجة ضغط الأزرار
-@app.route("/callback", methods=["POST"])
-def callback():
-    data = request.json
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("toggle", toggle_buttons))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, auto_edit))
 
-    if "callback_query" in data:
-        query = data["callback_query"]
-        from_id = query["from"]["id"]
-        action = query["data"]
-
-        # نفرز الـ action
-        if action.startswith("accept_"):
-            user = action.split("_")[1]
-            msg = f"✅ المستخدم {from_id} وافق على الطلب (ID: {user})"
-        elif action.startswith("reject_"):
-            user = action.split("_")[1]
-            msg = f"❌ المستخدم {from_id} رفض الطلب (ID: {user})"
-        else:
-            msg = "⚠️ حدث خطأ بالمعالجة."
-
-        # نرسل النتيجة لإلك
-        requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            data={"chat_id": ADMIN_ID, "text": msg}
-        )
-
-    return "ok"
-
+    print("🚀 Bot is running...")
+    app.run_polling()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    main()
