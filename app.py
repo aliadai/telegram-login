@@ -1,61 +1,47 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+# app.py
 import os
+import telebot
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# التوكن من متغير البيئة (حتى ما تكتبه علنيًا)
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.environ.get("BOT_TOKEN")
+if not TOKEN:
+    print("ERROR: BOT_TOKEN not set")
+    exit(1)
 
-# حالة تفعيل الزر
+bot = telebot.TeleBot(TOKEN, parse_mode="HTML")
 button_enabled = True
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = []
-    if button_enabled:
-        keyboard = [[InlineKeyboardButton("زر شفاف ✨", url="https://t.me/yourusername")]]
-    reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
-    await update.message.reply_text("👋 أهلاً! أرسل أي رسالة وسأضيف لها زر شفاف تلقائيًا.", reply_markup=reply_markup)
+@bot.message_handler(commands=['start'])
+def cmd_start(message):
+    bot.reply_to(message, "👋 أهلاً! أرسل أي نص وسأعيد إرساله مع زر شفاف.\nاستخدم /toggle on أو /toggle off")
 
-async def auto_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@bot.message_handler(commands=['toggle'])
+def cmd_toggle(message):
     global button_enabled
-    message = update.message
-    if not message:
-        return
-
-    keyboard = []
-    if button_enabled:
-        keyboard = [[InlineKeyboardButton("زر شفاف ✨", url="https://t.me/yourusername")]]
-    reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
-
-    await message.reply_text(
-        f"📩 {message.text}\n\n✅ تمت إضافة الزر تلقائيًا" if button_enabled else f"📩 {message.text}",
-        reply_markup=reply_markup
-    )
-
-async def toggle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global button_enabled
-    if not context.args:
-        await update.message.reply_text("استخدم: /toggle on أو /toggle off")
-        return
-
-    arg = context.args[0].lower()
-    if arg == "on":
-        button_enabled = True
-        await update.message.reply_text("✅ تم تفعيل الزر التلقائي.")
-    elif arg == "off":
-        button_enabled = False
-        await update.message.reply_text("❌ تم تعطيل الزر التلقائي.")
+    parts = message.text.split()
+    if len(parts) > 1 and parts[1].lower() in ("on","off"):
+        button_enabled = (parts[1].lower() == "on")
+        bot.reply_to(message, f"الحالة الآن: {'✅ مفعل' if button_enabled else '❌ معطل'}")
     else:
-        await update.message.reply_text("استخدم: /toggle on أو /toggle off فقط.")
+        bot.reply_to(message, "استخدم: /toggle on أو /toggle off")
 
-def main():
-    app = Application.builder().token(TOKEN).build()
+@bot.message_handler(func=lambda m: True, content_types=['text'])
+def handle_text(message):
+    global button_enabled
+    # لا نحاول تعديل رسالة المستخدم (هذا غير مسموح للبوت)
+    # نرسل رسالة جديدة تحتوي النص + زر شفاف
+    if not button_enabled:
+        return
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("toggle", toggle_buttons))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, auto_edit))
+    # زر "شفاف" — نستخدم حرف فراغ من نوع braille blank (U+2800) ليكون شبه شفاف
+    kb = InlineKeyboardMarkup()
+    kb.add(InlineKeyboardButton(text="\u2800", url="https://t.me/yourusername"))  # عدل URL هنا
 
-    print("🚀 Bot is running...")
-    app.run_polling()
+    try:
+        bot.send_message(message.chat.id, f"✨ تم إعادة إرسال رسالتك:\n{message.text}", reply_markup=kb)
+    except Exception as e:
+        print("Send error:", e)
 
 if __name__ == "__main__":
-    main()
+    print("Bot polling started...")
+    bot.infinity_polling(timeout=20, long_polling_timeout = 5)
