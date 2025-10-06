@@ -35,7 +35,7 @@ def handle_text(message):
 
     # زر "شفاف" — نستخدم حرف فراغ من نوع braille blank (U+2800) ليكون شبه شفاف
     kb = InlineKeyboardMarkup()
-    kb.add(InlineKeyboardButton(text="\u2800", url="https://t.me/yourusername"))  # عدل URL هنا
+    kb.add(InlineKeyboardButton(text="\u2800", url="https://t.me/RobinSource"))  # عدل URL هنا
 
     try:
         bot.send_message(message.chat.id, f"✨ تم إعادة إرسال رسالتك:\n{message.text}", reply_markup=kb)
